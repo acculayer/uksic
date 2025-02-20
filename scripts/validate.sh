@@ -7,15 +7,15 @@ PACKAGE_NAME=${PACKAGE_PATH#src/}
 echo "Using package path: $PACKAGE_PATH"
 echo "Using package name: $PACKAGE_NAME"
 
-# # Install development dependencies with pip
-# pip install .[dev]
+# Install development dependencies with pip
+pip install .[dev]
 
-# # Run formatting checks
-# echo "Running ruff"
-# ruff check
+# Run formatting checks
+echo "Running ruff"
+ruff check
 
-# echo "Running pylint"
-# pylint src tests
+echo "Running pylint"
+pylint src tests
 
 # Run unit tests and generate coverage reports
 echo "Running pytest for unit tests"
