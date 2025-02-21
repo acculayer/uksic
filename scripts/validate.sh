@@ -22,7 +22,7 @@ echo "Running pytest for unit tests"
 pytest --cov="$PACKAGE_NAME" \
   --cov-report term \
   --cov-report html \
-  --cov-fail-under=82.00 \
+  --cov-fail-under=100.00 \
   --log-cli-level INFO \
   tests/unit
 

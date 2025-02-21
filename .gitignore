@@ -13,5 +13,5 @@ htmlcov
 /tests/unit/etl/data/download/empty/*
 !/tests/unit/etl/data/download/empty/.gitkeep
 
-/tests/unit/etl/data/app/*
-!/tests/unit/etl/data/app/.gitkeep
+/tests/unit/etl/data/app/empty/*
+!/tests/unit/etl/data/app/empty/.gitkeep

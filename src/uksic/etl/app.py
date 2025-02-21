@@ -7,27 +7,48 @@ from uksic.etl.download import Downloader
 from uksic.etl.extract import Extractor
 
 # pylint: disable=line-too-long
-SIC_SOURCE_REMOTE_URL = 'https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/publisheduksicsummaryofstructureworksheet.xlsx'
-DATA_DIR = Path(__file__).parent.parent.parent.parent.joinpath('data')
+URL = 'https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/publisheduksicsummaryofstructureworksheet.xlsx'
 
-def run(data_dir: Path | None = None, sic_local_filename: str = 'sic.xlsx'):
+class App:
     """
-    Run application to retrieve remote payload and perform ETL
+    Main application class that coordinates downloading an extracting data.
     """
 
-    if data_dir is None:
-        data_dir = DATA_DIR
+    def __init__(
+        self,
+        url: str = URL,
+        data_dir: Path | None = None,
+        out_file_name: str = 'publisheduksicsummaryofstructureworksheet.xlsx'
+    ):
+        self.url = url
 
-    sic_source_local_path = data_dir.joinpath(sic_local_filename)
+        self.data_dir = data_dir
 
-    # Download file if doesn't exist
-    downloader = Downloader(src=SIC_SOURCE_REMOTE_URL, dst=sic_source_local_path)
-    downloader.download()
-
-    # Extract files if they don't exist
-    extractor = Extractor(src_path=sic_source_local_path, dst_dir=DATA_DIR)
-    extractor.extract()
+        self.out_file_path: Path = data_dir.joinpath(out_file_name)
 
 
-if __name__ == "__main__":
-    run()
+    def run(self):
+        """
+        Run application to retrieve remote payload and perform ETL
+        """
+
+        self.download()
+        self.extract()
+
+
+    def download(self):
+        """
+        Perform download of SIC payload for extraction.
+        """
+        # Download file if it doesn't exist
+        downloader = Downloader(src=self.url, dst=self.out_file_path)
+        downloader.download()
+
+
+    def extract(self):
+        """
+        Extract download payload for transforming into output formats.
+        """
+        # Extract files if they don't exist
+        extractor = Extractor(src_path=self.out_file_path, dst_dir=self.data_dir)
+        extractor.extract()
