@@ -4,7 +4,7 @@ requires = ["hatchling"]
 
 [project]
 name = "uksic"
-version = "0.0.0"
+version = "0.0.1"
 description = "UK Standard Industrial Classification (SIC)"
 readme = "README.md"
 requires-python = ">=3.11"
