@@ -2,10 +2,11 @@
 Open downloaded payload
 """
 
-from csv import QUOTE_ALL
+from csv import QUOTE_NOTNULL
 import logging
 from pathlib import Path
 from pandas import DataFrame, read_excel
+from uksic.etl.model import SicExtract
 
 class Extractor:
     """
@@ -21,6 +22,7 @@ class Extractor:
         self.src_path = src_path
         self.dst_dir = dst_dir
         self.df = df
+        self.sic_extract = SicExtract()
 
         self.load_df()
 
@@ -38,19 +40,19 @@ class Extractor:
         Write a dataframe to a local CSV
         """
 
-        print('*********')
-        print(dst_path)
-        print('*********')
         logging.info('Writing to CSV: %s', dst_path)
-        df.to_csv(path_or_buf=dst_path, index=False, quoting=QUOTE_ALL)
+        df.to_csv(path_or_buf=dst_path, index=False, quoting=QUOTE_NOTNULL, na_rep=None)
 
 
-    def extract(self):
+    def extract(self) -> SicExtract:
         """
         Use pandas to extract rows
         """
 
         self.load_df()
+
+        # Extract into a single CSV
+        self.calculate_all()
 
         # Extract each level into separate CSVs
         self.extract_sections()
@@ -59,26 +61,27 @@ class Extractor:
         self.extract_classes()
         self.extract_subclasses()
 
+        return self.sic_extract
 
-    def extract_rows(self, level: str, columns: dict, filename: str):
+
+    def extract_rows(self, level: str, columns: dict, filename: str) -> DataFrame:
         """
         Given column configuration, extract rows. Description column is always extracted.
         Applies text formatting. Writes rows to CSV.
         """
 
-        columns['Description'] = 'summary'
         if 'id' not in columns.values():
             raise ValueError('mapped id column must be specified')
 
-        rows = self.df[self.df['Level headings'] == level].rename(
+        # Ensure summary (Description field in raw data) is always extracted
+        columns['summary'] = 'summary'
+        rows = self.df[self.df['level'] == level].rename(
             columns=columns
         )[columns.values()]
 
 
         for column in columns.values():
             rows[column] = [str(i).strip() for i in rows[column]]
-
-        rows['summary'] = [str(i).capitalize() for i in rows['summary']]
 
         # Write to CSV
         self.write_csv(df=rows, dst_path=self.dst_dir.joinpath(filename))
@@ -91,9 +94,9 @@ class Extractor:
         Extract sections from raw dataframe
         """
 
-        self.extract_rows(
-            level='SECTION',
-            columns={'SECTION': 'id'},
+        self.sic_extract.sections = self.extract_rows(
+            level='Section',
+            columns={'section': 'id'},
             filename='sections.csv'
         )
 
@@ -103,9 +106,9 @@ class Extractor:
         Extract divisions from raw dataframe
         """
 
-        self.extract_rows(
+        self.sic_extract.divisions = self.extract_rows(
             level='Division',
-            columns={'Division': 'id', 'SECTION': 'section_id'},
+            columns={'division': 'id', 'section': 'section_id'},
             filename='divisions.csv'
         )
 
@@ -115,9 +118,9 @@ class Extractor:
         Extract groups from raw dataframe
         """
 
-        self.extract_rows(
+        self.sic_extract.groups = self.extract_rows(
             level='Group',
-            columns={'Group': 'id', 'Division': 'division_id'},
+            columns={'group': 'id', 'division': 'division_id'},
             filename='groups.csv'
         )
 
@@ -127,9 +130,9 @@ class Extractor:
         Extract classes from raw dataframe
         """
 
-        self.extract_rows(
+        self.sic_extract.classes = self.extract_rows(
             level='Class',
-            columns={'Class': 'id', 'Group': 'group_id'},
+            columns={'class': 'id', 'group': 'group_id'},
             filename='classes.csv'
         )
 
@@ -139,8 +142,43 @@ class Extractor:
         Extract subclasses from raw dataframe
         """
 
-        self.extract_rows(
-            level='Sub Class',
-            columns={'Sub Class': 'id', 'Class': 'class_id'},
+        self.sic_extract.subclasses = self.extract_rows(
+            level='Sub class',
+            columns={'subclass': 'id', 'class': 'class_id'},
             filename='subclasses.csv'
         )
+
+
+    def calculate_all(self):
+        """
+        Combines all levels into a flat dataframe.
+        Renames all columns. This method should be called before separate extractors.
+        """
+
+        self.df.rename(
+            inplace=True,
+            columns={
+                'Description': 'summary',
+                'SECTION': 'section',
+                'Division': 'division',
+                'Group': 'group',
+                'Class': 'class',
+                'Sub Class': 'subclass',
+                'Most disaggregated level': 'term',
+                'Level headings': 'level',
+            }
+        )
+
+        self.df.replace(
+            to_replace='^na$',
+            value='',
+            regex=True,
+            inplace=True
+        )
+
+        for column in self.df.columns:
+
+            self.df[column] = [str(i).strip().capitalize() for i in self.df[column]]
+
+        # Write to CSV
+        self.write_csv(df=self.df, dst_path=self.dst_dir.joinpath('combined.csv'))

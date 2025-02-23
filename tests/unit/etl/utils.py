@@ -4,7 +4,7 @@ Test utilities for re-use across tests.
 
 from pathlib import Path
 from pandas import DataFrame, read_csv
-from pandas.testing import assert_series_equal
+from pandas.testing import assert_series_equal, assert_frame_equal
 
 def assert_csvs_are_correct(data_dir: Path):
     """
@@ -76,6 +76,7 @@ def assert_csvs_are_correct(data_dir: Path):
     for csv_name, expected_data in expected.items():
         csv_path = data_dir.joinpath(f'{csv_name}.csv')
         df = read_csv(filepath_or_buffer=csv_path, dtype='string')
+
         assert list(df) == list(dict(expected_data['data']).keys())
         assert len(df) == expected_data['row_count']
 
@@ -83,3 +84,13 @@ def assert_csvs_are_correct(data_dir: Path):
         expected_series =  DataFrame(data=expected_data['data'], dtype='string').iloc[0]
 
         assert_series_equal(expected_series, actual_series)
+
+
+def assert_combined_csv_is_correct(expected_file: Path, actual_file: Path):
+    """
+    Verifies that a combined dataframe is calculated correctly when compared to a raw source
+    """
+
+    actual = read_csv(filepath_or_buffer=actual_file)
+    expected = read_csv(filepath_or_buffer=expected_file)
+    assert_frame_equal(expected, actual)
