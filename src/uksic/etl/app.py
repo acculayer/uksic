@@ -3,8 +3,10 @@ Retrieve remote payload and perform extract/transform/load (ETL)
 """
 
 from pathlib import Path
+from pandas import DataFrame
 from uksic.etl.download import Downloader
 from uksic.etl.extract import Extractor
+from uksic.etl.transform import Transformer
 
 # pylint: disable=line-too-long
 URL = 'https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/publisheduksicsummaryofstructureworksheet.xlsx'
@@ -21,10 +23,9 @@ class App:
         out_file_name: str = 'publisheduksicsummaryofstructureworksheet.xlsx'
     ):
         self.url = url
-
         self.data_dir = data_dir
-
         self.out_file_path: Path = data_dir.joinpath(out_file_name)
+        self.df: DataFrame | None = None
 
 
     def run(self):
@@ -34,6 +35,7 @@ class App:
 
         self.download()
         self.extract()
+        self.transform()
 
 
     def download(self):
@@ -45,10 +47,20 @@ class App:
         downloader.download()
 
 
-    def extract(self):
+    def extract(self) -> DataFrame:
         """
         Extract download payload for transforming into output formats.
         """
         # Extract files if they don't exist
         extractor = Extractor(src_path=self.out_file_path, dst_dir=self.data_dir)
         extractor.extract()
+        self.df = extractor.df
+
+
+    def transform(self, df: DataFrame):
+        """
+        Transform extracted dataframe into exportable resources
+        """
+
+        transformer = Transformer(df=self.df)
+        transformer.transform()

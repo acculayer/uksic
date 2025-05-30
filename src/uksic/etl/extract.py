@@ -3,6 +3,7 @@ Open downloaded payload
 """
 
 from csv import QUOTE_NOTNULL
+import json
 import logging
 from pathlib import Path
 from pandas import DataFrame, read_excel
@@ -60,6 +61,9 @@ class Extractor:
         self.extract_groups()
         self.extract_classes()
         self.extract_subclasses()
+
+        # Export extracts into data structures
+        self.export()
 
         return self.sic_extract
 
@@ -182,3 +186,67 @@ class Extractor:
 
         # Write to CSV
         self.write_csv(df=self.df, dst_path=self.dst_dir.joinpath('combined.csv'))
+
+
+    def export(self):
+        """
+        Export to python dict file
+        """
+
+        # self.sic_extract.subclasses.to_json(path_or_buf=self.dst_dir.joinpath('sic.json'))
+
+        output = []
+
+        for _, section in self.sic_extract.sections.iterrows():
+            section_id = section['id']
+            # Divisions
+            divisions = []
+            for _, division in self.sic_extract.divisions.iterrows():
+                if section_id == division['section_id']:
+                    division_id = division['id']
+                    # Groups
+                    groups = []
+                    for _, group in self.sic_extract.groups.iterrows():
+                        if division_id == group['division_id']:
+                            # Classes
+                            group_id = group['id']
+                            classes = []
+
+                            for _, sic_class in self.sic_extract.classes.iterrows():
+                                if group_id == sic_class['group_id']:
+                                    class_id = sic_class['id']
+                                    classes.append({
+                                        'id': class_id,
+                                        'summary': sic_class['summary'],
+                                        'subclasses': []
+                                    })
+
+                            groups.append({
+                                'id': group['id'],
+                                'summary': division['summary'],
+                                'classes': classes
+                            })
+
+                    divisions.append({
+                        'id': division['id'],
+                        'summary': division['summary'],
+                        'groups': groups,
+                    })
+
+            # Sections
+            item = {
+                'id': section['id'],
+                'summary': section['summary'],
+                'divisions': divisions
+            }
+
+            output.append(item)
+
+        print(output)
+
+        # output = {}
+        # for subclass in self.sic_extract.subclasses:
+        #     output[subclass] =
+
+        with open(file=self.dst_dir.joinpath('sic.json'), mode='w', encoding='utf8') as fh:
+            fh.write(json.dumps(output, indent=2))
