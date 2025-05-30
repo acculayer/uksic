@@ -8,7 +8,8 @@ from pandas import DataFrame
 @dataclass
 class SicExtract:
     """
-    An ETL Extract representation of ONS SIC data
+    An ETL Extract representation of ONS SIC data.
+    Used to extract relational data as CSVs
     """
 
     sections: DataFrame | None = None
